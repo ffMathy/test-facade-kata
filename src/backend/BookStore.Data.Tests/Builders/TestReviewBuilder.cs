@@ -5,14 +5,15 @@ namespace BookStore.Data.Tests.Builders;
 
 /// <summary>
 /// Test builder for <see cref="Review"/> instances.
-/// Wraps <see cref="ReviewBuilder"/> and provides sensible defaults so tests
-/// can create a valid <see cref="Review"/> without specifying every field.
+/// Inherits <see cref="ReviewBuilder"/> and pre-populates all required fields
+/// so tests can create a valid <see cref="Review"/> with zero setup.
 /// The <see cref="Review.ReviewerName"/> is unique by default (GUID interpolation)
 /// so multiple calls in the same test will never collide.
 /// </summary>
-public class TestReviewBuilder
+public class TestReviewBuilder : ReviewBuilder
 {
-    private readonly ReviewBuilder _inner = new();
+    private TestBookBuilder? _bookBuilder;
+    private Book? _book;
 
     public TestReviewBuilder()
     {
@@ -21,41 +22,63 @@ public class TestReviewBuilder
         WithBookId(1);
     }
 
-    public TestReviewBuilder WithReviewerName(string name)
-    {
-        _inner.WithReviewerName(name);
-        return this;
-    }
-
-    public TestReviewBuilder WithRating(int rating)
-    {
-        _inner.WithRating(rating);
-        return this;
-    }
-
-    public TestReviewBuilder WithComment(string comment)
-    {
-        _inner.WithComment(comment);
-        return this;
-    }
-
-    public TestReviewBuilder WithBookId(int bookId)
-    {
-        _inner.WithBookId(bookId);
-        return this;
-    }
-
     /// <summary>Sets <see cref="Review.Rating"/> to its maximum allowed value of 5.</summary>
-    public TestReviewBuilder WithMaxRating() => WithRating(5);
+    public TestReviewBuilder WithMaxRating()
+    {
+        WithRating(5);
+        return this;
+    }
 
     /// <summary>Sets <see cref="Review.Rating"/> to its minimum allowed value of 1.</summary>
-    public TestReviewBuilder WithMinRating() => WithRating(1);
+    public TestReviewBuilder WithMinRating()
+    {
+        WithRating(1);
+        return this;
+    }
 
     /// <summary>
-    /// Sets <see cref="Review.BookId"/> from the <see cref="Book.Id"/> of
-    /// an already-persisted <paramref name="book"/>.
+    /// Sets <see cref="Review.BookId"/> and <see cref="Review.Book"/> from an
+    /// already-persisted <paramref name="book"/>.
     /// </summary>
-    public TestReviewBuilder WithBook(Book book) => WithBookId(book.Id);
+    public TestReviewBuilder WithBook(Book book)
+    {
+        _book = book;
+        _bookBuilder = null;
+        WithBookId(book.Id);
+        return this;
+    }
 
-    public Task<Review> BuildAsync() => _inner.BuildAsync();
+    /// <summary>
+    /// Configures a related <see cref="Book"/> using a <see cref="TestBookBuilder"/>.
+    /// The optional <paramref name="configure"/> action lets callers override default values.
+    /// The built <see cref="Book"/> is attached to <see cref="Review.Book"/> when
+    /// <see cref="BuildAsync"/> is called.
+    /// </summary>
+    /// <example>
+    /// Default book:
+    /// <code>await new TestReviewBuilder().WithBook().BuildAsync();</code>
+    /// Custom book:
+    /// <code>await new TestReviewBuilder().WithBook(b => b.WithTitle("Dune")).BuildAsync();</code>
+    /// </example>
+    public TestReviewBuilder WithBook(Action<TestBookBuilder>? configure = null)
+    {
+        _bookBuilder = new TestBookBuilder();
+        configure?.Invoke(_bookBuilder);
+        _book = null;
+        return this;
+    }
+
+    public new async Task<Review> BuildAsync()
+    {
+        if (_bookBuilder != null)
+        {
+            _book = await _bookBuilder.BuildAsync();
+            if (_book.Id != 0)
+                WithBookId(_book.Id);
+        }
+
+        var review = await base.BuildAsync();
+        review.Book = _book;
+        return review;
+    }
 }

@@ -5,14 +5,14 @@ namespace BookStore.Data.Tests.Builders;
 
 /// <summary>
 /// Test builder for <see cref="Book"/> instances.
-/// Wraps <see cref="BookBuilder"/> and provides sensible defaults so tests
-/// can create a valid <see cref="Book"/> without specifying every field.
+/// Inherits <see cref="BookBuilder"/> and pre-populates all required fields
+/// so tests can create a valid <see cref="Book"/> with zero setup.
 /// The <see cref="Book.Title"/> is unique by default (GUID interpolation)
 /// so multiple calls in the same test will never collide.
 /// </summary>
-public class TestBookBuilder
+public class TestBookBuilder : BookBuilder
 {
-    private readonly BookBuilder _inner = new();
+    private TestAuthorBuilder? _authorBuilder;
 
     public TestBookBuilder()
     {
@@ -21,26 +21,42 @@ public class TestBookBuilder
         WithAuthorId(1);
     }
 
-    public TestBookBuilder WithTitle(string title)
-    {
-        _inner.WithTitle(title);
-        return this;
-    }
-
-    public TestBookBuilder WithPublishedYear(int year)
-    {
-        _inner.WithPublishedYear(year);
-        return this;
-    }
-
-    public TestBookBuilder WithAuthorId(int authorId)
-    {
-        _inner.WithAuthorId(authorId);
-        return this;
-    }
-
     /// <summary>Sets <see cref="Book.PublishedYear"/> to the current calendar year.</summary>
-    public TestBookBuilder WithCurrentYear() => WithPublishedYear(DateTime.Now.Year);
+    public TestBookBuilder WithCurrentYear()
+    {
+        WithPublishedYear(DateTime.Now.Year);
+        return this;
+    }
 
-    public Task<Book> BuildAsync() => _inner.BuildAsync();
+    /// <summary>
+    /// Configures a related <see cref="Author"/> using a <see cref="TestAuthorBuilder"/>.
+    /// The optional <paramref name="configure"/> action lets callers override default values.
+    /// The built <see cref="Author"/> is attached to <see cref="Book.Author"/> when
+    /// <see cref="BuildAsync"/> is called.
+    /// </summary>
+    /// <example>
+    /// Default author:
+    /// <code>await new TestBookBuilder().WithAuthor().BuildAsync();</code>
+    /// Custom author:
+    /// <code>await new TestBookBuilder().WithAuthor(a => a.WithName("Tolkien")).BuildAsync();</code>
+    /// </example>
+    public TestBookBuilder WithAuthor(Action<TestAuthorBuilder>? configure = null)
+    {
+        _authorBuilder = new TestAuthorBuilder();
+        configure?.Invoke(_authorBuilder);
+        return this;
+    }
+
+    public new async Task<Book> BuildAsync()
+    {
+        var book = await base.BuildAsync();
+        if (_authorBuilder != null)
+        {
+            var author = await _authorBuilder.BuildAsync();
+            if (author.Id != 0)
+                book.AuthorId = author.Id;
+            book.Author = author;
+        }
+        return book;
+    }
 }
