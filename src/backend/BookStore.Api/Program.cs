@@ -38,72 +38,82 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<BookStoreDbContext>();
 
-    // Authors
-    var tolkien = new AuthorBuilder()
-        .WithId(1).WithName("J.R.R. Tolkien")
+    // ── Stage 1: Authors and Genres ───────────────────────────────────────
+    // We save these first so that EF assigns their auto-generated IDs.
+    // Those IDs are then available on the objects for use in stage 2.
+
+    var tolkien = await new AuthorBuilder()
+        .WithName("J.R.R. Tolkien")
         .WithBio("English author, poet, and academic best known for The Lord of the Rings.")
-        .Build();
+        .BuildAsync();
 
-    var orwell = new AuthorBuilder()
-        .WithId(2).WithName("George Orwell")
+    var orwell = await new AuthorBuilder()
+        .WithName("George Orwell")
         .WithBio("English novelist and essayist famous for 1984 and Animal Farm.")
-        .Build();
+        .BuildAsync();
 
-    db.Authors.AddRange(tolkien, orwell);
+    await db.Authors.AddRangeAsync(tolkien, orwell);
 
-    // Genres
-    var fantasy = new GenreBuilder().WithId(1).WithName("Fantasy").Build();
-    var dystopian = new GenreBuilder().WithId(2).WithName("Dystopian").Build();
-    var classic = new GenreBuilder().WithId(3).WithName("Classic").Build();
-    db.Genres.AddRange(fantasy, dystopian, classic);
+    var fantasy  = await new GenreBuilder().WithName("Fantasy").BuildAsync();
+    var dystopian = await new GenreBuilder().WithName("Dystopian").BuildAsync();
+    var classic  = await new GenreBuilder().WithName("Classic").BuildAsync();
 
-    // Books (Author -> Book)
-    var lotr = new BookBuilder()
-        .WithId(1).WithTitle("The Lord of the Rings")
-        .WithPublishedYear(1954).WithAuthorId(1)
-        .Build();
+    await db.Genres.AddRangeAsync(fantasy, dystopian, classic);
 
-    var hobbit = new BookBuilder()
-        .WithId(2).WithTitle("The Hobbit")
-        .WithPublishedYear(1937).WithAuthorId(1)
-        .Build();
+    // Flush to the database → tolkien.Id, orwell.Id, fantasy.Id … are now set
+    await db.SaveChangesAsync();
 
-    var nineteenEightyFour = new BookBuilder()
-        .WithId(3).WithTitle("1984")
-        .WithPublishedYear(1949).WithAuthorId(2)
-        .Build();
+    // ── Stage 2: Books (reference the IDs assigned in stage 1) ───────────
+    var lotr = await new BookBuilder()
+        .WithTitle("The Lord of the Rings")
+        .WithPublishedYear(1954).WithAuthorId(tolkien.Id)
+        .BuildAsync();
 
-    db.Books.AddRange(lotr, hobbit, nineteenEightyFour);
+    var hobbit = await new BookBuilder()
+        .WithTitle("The Hobbit")
+        .WithPublishedYear(1937).WithAuthorId(tolkien.Id)
+        .BuildAsync();
 
+    var nineteenEightyFour = await new BookBuilder()
+        .WithTitle("1984")
+        .WithPublishedYear(1949).WithAuthorId(orwell.Id)
+        .BuildAsync();
+
+    await db.Books.AddRangeAsync(lotr, hobbit, nineteenEightyFour);
+
+    // Flush → lotr.Id, hobbit.Id … are now set
+    await db.SaveChangesAsync();
+
+    // ── Stage 3: Join rows and Reviews (reference IDs from stages 1 & 2) ─
     // Book -> Genre links (Book -> BookGenre -> Genre)
-    db.BookGenres.AddRange(
-        new BookStore.Data.Models.BookGenre { BookId = 1, GenreId = 1 },  // LotR -> Fantasy
-        new BookStore.Data.Models.BookGenre { BookId = 1, GenreId = 3 },  // LotR -> Classic
-        new BookStore.Data.Models.BookGenre { BookId = 2, GenreId = 1 },  // Hobbit -> Fantasy
-        new BookStore.Data.Models.BookGenre { BookId = 3, GenreId = 2 },  // 1984 -> Dystopian
-        new BookStore.Data.Models.BookGenre { BookId = 3, GenreId = 3 }   // 1984 -> Classic
+    await db.BookGenres.AddRangeAsync(
+        await new BookGenreBuilder().WithBookId(lotr.Id).WithGenreId(fantasy.Id).BuildAsync(),            // LotR -> Fantasy
+        await new BookGenreBuilder().WithBookId(lotr.Id).WithGenreId(classic.Id).BuildAsync(),            // LotR -> Classic
+        await new BookGenreBuilder().WithBookId(hobbit.Id).WithGenreId(fantasy.Id).BuildAsync(),          // Hobbit -> Fantasy
+        await new BookGenreBuilder().WithBookId(nineteenEightyFour.Id).WithGenreId(dystopian.Id).BuildAsync(), // 1984 -> Dystopian
+        await new BookGenreBuilder().WithBookId(nineteenEightyFour.Id).WithGenreId(classic.Id).BuildAsync()    // 1984 -> Classic
     );
 
     // Reviews (Book -> Review)
-    db.Reviews.AddRange(
-        new ReviewBuilder()
-            .WithId(1).WithBookId(1).WithRating(5)
+    await db.Reviews.AddRangeAsync(
+        await new ReviewBuilder()
+            .WithBookId(lotr.Id).WithRating(5)
             .WithReviewerName("Alice")
             .WithComment("An epic masterpiece!")
-            .Build(),
-        new ReviewBuilder()
-            .WithId(2).WithBookId(1).WithRating(4)
+            .BuildAsync(),
+        await new ReviewBuilder()
+            .WithBookId(lotr.Id).WithRating(4)
             .WithReviewerName("Bob")
             .WithComment("Long but worth every page.")
-            .Build(),
-        new ReviewBuilder()
-            .WithId(3).WithBookId(3).WithRating(5)
+            .BuildAsync(),
+        await new ReviewBuilder()
+            .WithBookId(nineteenEightyFour.Id).WithRating(5)
             .WithReviewerName("Carol")
             .WithComment("A chilling vision of the future.")
-            .Build()
+            .BuildAsync()
     );
 
-    db.SaveChanges();
+    await db.SaveChangesAsync();
 }
 
 // -----------------------------------------------------------------

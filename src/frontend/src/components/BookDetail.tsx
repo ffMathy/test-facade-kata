@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { Book, Review } from "../types";
+import type { GetBookByIdResponse } from "../types";
 
 const API_BASE = "http://localhost:5000";
 
@@ -12,30 +12,26 @@ interface Props {
 /**
  * BookDetail component
  *
- * Fetches a single book (with its author and genres) from /api/books/{id},
- * and its reviews from /api/books/{id}/reviews.
+ * Fetches a single book from /api/books/{id}.
+ * The detail response already includes author, genres, and reviews,
+ * so only one fetch is needed (no separate /reviews call).
  *
  * This component demonstrates:
- * - Multiple fetch calls for nested resources
  * - Conditional rendering (loading / error / data)
  * - The Author -> Book -> Review relationship in the UI
  */
 export default function BookDetail({ bookId, onBack }: Props) {
-  const [book, setBook] = useState<Book | null>(null);
-  const [reviews, setReviews] = useState<Review[]>([]);
+  const [book, setBook] = useState<GetBookByIdResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Fetch book detail and reviews in parallel
-    Promise.all([
-      fetch(`${API_BASE}/api/books/${bookId}`).then((r) => r.json() as Promise<Book>),
-      fetch(`${API_BASE}/api/books/${bookId}/reviews`).then((r) => r.json() as Promise<Review[]>),
-    ])
-      .then(([bookData, reviewData]) => {
-        setBook(bookData);
-        setReviews(reviewData);
+    fetch(`${API_BASE}/api/books/${bookId}`)
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json() as Promise<GetBookByIdResponse>;
       })
+      .then(setBook)
       .catch((err: unknown) =>
         setError(err instanceof Error ? err.message : "Unknown error")
       )
@@ -46,8 +42,7 @@ export default function BookDetail({ bookId, onBack }: Props) {
   if (error) return <p role="alert">Error: {error}</p>;
   if (!book) return <p>Book not found.</p>;
 
-  const genres =
-    book.bookGenres?.map((bg) => bg.genre.name).join(", ") ?? "–";
+  const genres = book.genres.map((g) => g.name).join(", ") || "–";
 
   return (
     <section>
@@ -66,11 +61,11 @@ export default function BookDetail({ bookId, onBack }: Props) {
       </p>
 
       <h3>Reviews</h3>
-      {reviews.length === 0 ? (
+      {book.reviews.length === 0 ? (
         <p>No reviews yet.</p>
       ) : (
         <ul>
-          {reviews.map((review) => (
+          {book.reviews.map((review) => (
             <li key={review.id}>
               <strong>{review.reviewerName}</strong> — {review.rating}/5
               {review.comment && <p>{review.comment}</p>}

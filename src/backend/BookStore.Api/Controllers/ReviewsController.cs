@@ -16,49 +16,65 @@ public class ReviewsController(BookStoreDbContext db) : ControllerBase
 {
     // GET /api/books/{bookId}/reviews
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Review>>> GetAll(int bookId)
+    public async Task<ActionResult<IEnumerable<GetAllReviewsResponse>>> GetAll(int bookId)
     {
         // Verify the book exists before listing its reviews
         if (!await db.Books.AnyAsync(b => b.Id == bookId))
             return NotFound($"Book {bookId} not found.");
 
-        return await db.Reviews
+        var reviews = (await db.Reviews
             .Where(r => r.BookId == bookId)
-            .ToListAsync();
+            .ToListAsync())
+            .Select(r => new GetAllReviewsResponse(r.Id, r.BookId, r.ReviewerName, r.Rating, r.Comment));
+
+        return Ok(reviews);
     }
 
     // GET /api/books/{bookId}/reviews/{id}
     [HttpGet("{id}")]
-    public async Task<ActionResult<Review>> GetById(int bookId, int id)
+    public async Task<ActionResult<GetReviewByIdResponse>> GetById(int bookId, int id)
     {
         var review = await db.Reviews
             .FirstOrDefaultAsync(r => r.Id == id && r.BookId == bookId);
 
-        return review is null ? NotFound() : Ok(review);
+        return review is null
+            ? NotFound()
+            : Ok(new GetReviewByIdResponse(review.Id, review.BookId, review.ReviewerName, review.Rating, review.Comment));
     }
 
     // POST /api/books/{bookId}/reviews
     [HttpPost]
-    public async Task<ActionResult<Review>> Create(int bookId, Review review)
+    public async Task<ActionResult<CreateReviewResponse>> Create(int bookId, CreateReviewRequest request)
     {
         if (!await db.Books.AnyAsync(b => b.Id == bookId))
             return NotFound($"Book {bookId} not found.");
 
-        // Always use the bookId from the route — ignore whatever was in the body
-        review.BookId = bookId;
-        db.Reviews.Add(review);
+        var review = new Review
+        {
+            ReviewerName = request.ReviewerName,
+            Rating = request.Rating,
+            Comment = request.Comment,
+            // Always use the bookId from the route — ignore whatever was in the body
+            BookId = bookId
+        };
+        await db.Reviews.AddAsync(review);
         await db.SaveChangesAsync();
 
-        return CreatedAtAction(nameof(GetById), new { bookId, id = review.Id }, review);
+        return CreatedAtAction(nameof(GetById), new { bookId, id = review.Id },
+            new CreateReviewResponse(review.Id, review.BookId, review.ReviewerName, review.Rating, review.Comment));
     }
 
     // PUT /api/books/{bookId}/reviews/{id}
     [HttpPut("{id}")]
-    public async Task<IActionResult> Update(int bookId, int id, Review review)
+    public async Task<IActionResult> Update(int bookId, int id, UpdateReviewRequest request)
     {
-        if (id != review.Id || bookId != review.BookId) return BadRequest();
+        var existing = await db.Reviews.FirstOrDefaultAsync(r => r.Id == id && r.BookId == bookId);
+        if (existing is null) return NotFound();
 
-        db.Entry(review).State = EntityState.Modified;
+        existing.Rating = request.Rating;
+        existing.Comment = request.Comment;
+        existing.ReviewerName = request.ReviewerName;
+
         await db.SaveChangesAsync();
         return NoContent();
     }
@@ -76,4 +92,23 @@ public class ReviewsController(BookStoreDbContext db) : ControllerBase
         await db.SaveChangesAsync();
         return NoContent();
     }
+
+    // ── Request / Response records ──────────────────────────────────────────────
+    // Each endpoint has its own dedicated type — even when two types share the
+    // same fields they are never reused, so each endpoint can evolve independently.
+
+    /// <summary>Payload for creating a new review.</summary>
+    public record CreateReviewRequest(string ReviewerName, int Rating, string? Comment);
+
+    /// <summary>Payload for replacing a review's mutable fields.</summary>
+    public record UpdateReviewRequest(string ReviewerName, int Rating, string? Comment);
+
+    /// <summary>Response for GET /api/books/{bookId}/reviews — one item per review in the list.</summary>
+    public record GetAllReviewsResponse(int Id, int BookId, string ReviewerName, int Rating, string? Comment);
+
+    /// <summary>Response for GET /api/books/{bookId}/reviews/{id}.</summary>
+    public record GetReviewByIdResponse(int Id, int BookId, string ReviewerName, int Rating, string? Comment);
+
+    /// <summary>Response for POST /api/books/{bookId}/reviews — contains the newly created review.</summary>
+    public record CreateReviewResponse(int Id, int BookId, string ReviewerName, int Rating, string? Comment);
 }

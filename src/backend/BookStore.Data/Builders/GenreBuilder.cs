@@ -3,19 +3,13 @@ using BookStore.Data.Models;
 namespace BookStore.Data.Builders;
 
 /// <summary>
-/// Builder for creating <see cref="Genre"/> instances with sensible defaults.
+/// Builder for creating <see cref="Genre"/> instances.
 /// See <see cref="AuthorBuilder"/> for a description of the builder pattern.
+/// Note: there is no WithId() — the primary key is assigned automatically by EF.
 /// </summary>
 public class GenreBuilder
 {
-    private int _id = 1;
-    private string _name = "Default Genre";
-
-    public GenreBuilder WithId(int id)
-    {
-        _id = id;
-        return this;
-    }
+    private string? _name;
 
     public GenreBuilder WithName(string name)
     {
@@ -23,9 +17,18 @@ public class GenreBuilder
         return this;
     }
 
-    public Genre Build() => new()
+    /// <summary>
+    /// Throws <see cref="InvalidOperationException"/> if required fields are not set.
+    /// </summary>
+    public Task<Genre> BuildAsync()
     {
-        Id = _id,
-        Name = _name
-    };
+        if (string.IsNullOrWhiteSpace(_name))
+            throw new InvalidOperationException(
+                $"{nameof(Genre.Name)} is required. Call {nameof(WithName)}() before building.");
+
+        return Task.FromResult(new Genre
+        {
+            Name = _name
+        });
+    }
 }

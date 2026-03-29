@@ -8,8 +8,8 @@ namespace BookStore.Data.Builders;
 /// </summary>
 public class BookGenreBuilder
 {
-    private int _bookId = 1;
-    private int _genreId = 1;
+    private int _bookId;
+    private int _genreId;
 
     public BookGenreBuilder WithBookId(int bookId)
     {
@@ -23,9 +23,23 @@ public class BookGenreBuilder
         return this;
     }
 
-    public BookGenre Build() => new()
+    /// <summary>
+    /// Throws <see cref="InvalidOperationException"/> if required fields are not set.
+    /// </summary>
+    public Task<BookGenre> BuildAsync()
     {
-        BookId = _bookId,
-        GenreId = _genreId
-    };
+        if (_bookId == 0)
+            throw new InvalidOperationException(
+                $"{nameof(BookGenre.BookId)} is required. Call {nameof(WithBookId)}() before building.");
+
+        if (_genreId == 0)
+            throw new InvalidOperationException(
+                $"{nameof(BookGenre.GenreId)} is required. Call {nameof(WithGenreId)}() before building.");
+
+        return Task.FromResult(new BookGenre
+        {
+            BookId = _bookId,
+            GenreId = _genreId
+        });
+    }
 }

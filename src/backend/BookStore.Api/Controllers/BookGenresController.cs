@@ -15,15 +15,17 @@ public class BookGenresController(BookStoreDbContext db) : ControllerBase
 {
     // GET /api/books/{bookId}/genres — list all genres for a book
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Genre>>> GetAll(int bookId)
+    public async Task<ActionResult<IEnumerable<GetAllBookGenresResponse>>> GetAll(int bookId)
     {
         if (!await db.Books.AnyAsync(b => b.Id == bookId))
             return NotFound($"Book {bookId} not found.");
 
-        return await db.BookGenres
+        var genres = await db.BookGenres
             .Where(bg => bg.BookId == bookId)
-            .Select(bg => bg.Genre!)
+            .Select(bg => new GetAllBookGenresResponse(bg.Genre!.Id, bg.Genre.Name))
             .ToListAsync();
+
+        return Ok(genres);
     }
 
     // POST /api/books/{bookId}/genres/{genreId} — link a genre to a book
@@ -40,7 +42,7 @@ public class BookGenresController(BookStoreDbContext db) : ControllerBase
         if (await db.BookGenres.AnyAsync(bg => bg.BookId == bookId && bg.GenreId == genreId))
             return Conflict("This genre is already assigned to the book.");
 
-        db.BookGenres.Add(new BookGenre { BookId = bookId, GenreId = genreId });
+        await db.BookGenres.AddAsync(new BookGenre { BookId = bookId, GenreId = genreId });
         await db.SaveChangesAsync();
         return NoContent();
     }
@@ -58,4 +60,11 @@ public class BookGenresController(BookStoreDbContext db) : ControllerBase
         await db.SaveChangesAsync();
         return NoContent();
     }
+
+    // ── Request / Response records ──────────────────────────────────────────────
+    // Each endpoint has its own dedicated type — even when two types share the
+    // same fields they are never reused, so each endpoint can evolve independently.
+
+    /// <summary>Response for GET /api/books/{bookId}/genres — one item per genre assigned to the book.</summary>
+    public record GetAllBookGenresResponse(int Id, string Name);
 }

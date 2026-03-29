@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { Book } from "../types";
+import type { GetAllBooksResponse } from "../types";
 
 const API_BASE = "http://localhost:5000";
 
@@ -17,7 +17,7 @@ interface Props {
  * to navigate to the BookDetail component).
  */
 export default function BookList({ onSelect }: Props) {
-  const [books, setBooks] = useState<Book[]>([]);
+  const [books, setBooks] = useState<GetAllBooksResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -25,7 +25,7 @@ export default function BookList({ onSelect }: Props) {
     fetch(`${API_BASE}/api/books`)
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json() as Promise<Book[]>;
+        return res.json() as Promise<GetAllBooksResponse[]>;
       })
       .then(setBooks)
       .catch((err: unknown) =>
@@ -45,9 +45,8 @@ export default function BookList({ onSelect }: Props) {
       ) : (
         <ul>
           {books.map((book) => {
-            // Extract genre names from the nested BookGenre join objects
-            const genres =
-              book.bookGenres?.map((bg) => bg.genre.name).join(", ") ?? "";
+            // The API now returns genres as a flat array — no nested join table
+            const genres = book.genres.map((g) => g.name).join(", ");
 
             return (
               <li key={book.id}>

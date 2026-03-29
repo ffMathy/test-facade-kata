@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { Author } from "../types";
+import type { GetAllAuthorsResponse } from "../types";
 
 // The base URL for the backend API.
 // When running locally, the backend defaults to http://localhost:5000.
@@ -12,7 +12,7 @@ const API_BASE = "http://localhost:5000";
  * Demonstrates a basic fetch-on-mount pattern using useEffect + useState.
  */
 export default function AuthorList() {
-  const [authors, setAuthors] = useState<Author[]>([]);
+  const [authors, setAuthors] = useState<GetAllAuthorsResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -20,7 +20,7 @@ export default function AuthorList() {
     fetch(`${API_BASE}/api/authors`)
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json() as Promise<Author[]>;
+        return res.json() as Promise<GetAllAuthorsResponse[]>;
       })
       .then(setAuthors)
       .catch((err: unknown) =>
