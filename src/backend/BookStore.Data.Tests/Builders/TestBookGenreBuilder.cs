@@ -11,26 +11,12 @@ namespace BookStore.Data.Tests.Builders;
 public class TestBookGenreBuilder : BookGenreBuilder
 {
     private TestBookBuilder? _bookBuilder;
-    private Book? _book;
     private TestGenreBuilder? _genreBuilder;
-    private Genre? _genre;
 
     public TestBookGenreBuilder()
     {
         WithBookId(1);
         WithGenreId(1);
-    }
-
-    /// <summary>
-    /// Sets <see cref="BookGenre.BookId"/> and <see cref="BookGenre.Book"/> from an
-    /// already-persisted <paramref name="book"/>.
-    /// </summary>
-    public TestBookGenreBuilder WithBook(Book book)
-    {
-        _book = book;
-        _bookBuilder = null;
-        WithBookId(book.Id);
-        return this;
     }
 
     /// <summary>
@@ -49,19 +35,6 @@ public class TestBookGenreBuilder : BookGenreBuilder
     {
         _bookBuilder = new TestBookBuilder();
         configure?.Invoke(_bookBuilder);
-        _book = null;
-        return this;
-    }
-
-    /// <summary>
-    /// Sets <see cref="BookGenre.GenreId"/> and <see cref="BookGenre.Genre"/> from an
-    /// already-persisted <paramref name="genre"/>.
-    /// </summary>
-    public TestBookGenreBuilder WithGenre(Genre genre)
-    {
-        _genre = genre;
-        _genreBuilder = null;
-        WithGenreId(genre.Id);
         return this;
     }
 
@@ -81,29 +54,28 @@ public class TestBookGenreBuilder : BookGenreBuilder
     {
         _genreBuilder = new TestGenreBuilder();
         configure?.Invoke(_genreBuilder);
-        _genre = null;
         return this;
     }
 
     public new async Task<BookGenre> BuildAsync()
     {
+        Book? book = null;
         if (_bookBuilder != null)
         {
-            _book = await _bookBuilder.BuildAsync();
-            if (_book.Id != 0)
-                WithBookId(_book.Id);
+            book = await _bookBuilder.BuildAsync();
+            WithBookId(book.Id);
         }
 
+        Genre? genre = null;
         if (_genreBuilder != null)
         {
-            _genre = await _genreBuilder.BuildAsync();
-            if (_genre.Id != 0)
-                WithGenreId(_genre.Id);
+            genre = await _genreBuilder.BuildAsync();
+            WithGenreId(genre.Id);
         }
 
         var bookGenre = await base.BuildAsync();
-        bookGenre.Book = _book;
-        bookGenre.Genre = _genre;
+        bookGenre.Book = book;
+        bookGenre.Genre = genre;
         return bookGenre;
     }
 }

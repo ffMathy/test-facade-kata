@@ -50,11 +50,11 @@ public class TestBookBuilder : BookBuilder
     public new async Task<Book> BuildAsync()
     {
         var book = await base.BuildAsync();
+        book.Id = TestId.New();
         if (_authorBuilder != null)
         {
             var author = await _authorBuilder.BuildAsync();
-            if (author.Id != 0)
-                book.AuthorId = author.Id;
+            book.AuthorId = author.Id;
             book.Author = author;
         }
         return book;

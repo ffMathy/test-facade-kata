@@ -16,4 +16,11 @@ public class TestAuthorBuilder : AuthorBuilder
     {
         WithName($"Author {Guid.NewGuid()}");
     }
+
+    public new async Task<Author> BuildAsync()
+    {
+        var author = await base.BuildAsync();
+        author.Id = TestId.New();
+        return author;
+    }
 }

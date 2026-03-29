@@ -16,4 +16,11 @@ public class TestGenreBuilder : GenreBuilder
     {
         WithName($"Genre {Guid.NewGuid()}");
     }
+
+    public new async Task<Genre> BuildAsync()
+    {
+        var genre = await base.BuildAsync();
+        genre.Id = TestId.New();
+        return genre;
+    }
 }

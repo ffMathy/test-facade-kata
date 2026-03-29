@@ -13,7 +13,6 @@ namespace BookStore.Data.Tests.Builders;
 public class TestReviewBuilder : ReviewBuilder
 {
     private TestBookBuilder? _bookBuilder;
-    private Book? _book;
 
     public TestReviewBuilder()
     {
@@ -37,18 +36,6 @@ public class TestReviewBuilder : ReviewBuilder
     }
 
     /// <summary>
-    /// Sets <see cref="Review.BookId"/> and <see cref="Review.Book"/> from an
-    /// already-persisted <paramref name="book"/>.
-    /// </summary>
-    public TestReviewBuilder WithBook(Book book)
-    {
-        _book = book;
-        _bookBuilder = null;
-        WithBookId(book.Id);
-        return this;
-    }
-
-    /// <summary>
     /// Configures a related <see cref="Book"/> using a <see cref="TestBookBuilder"/>.
     /// The optional <paramref name="configure"/> action lets callers override default values.
     /// The built <see cref="Book"/> is attached to <see cref="Review.Book"/> when
@@ -64,21 +51,21 @@ public class TestReviewBuilder : ReviewBuilder
     {
         _bookBuilder = new TestBookBuilder();
         configure?.Invoke(_bookBuilder);
-        _book = null;
         return this;
     }
 
     public new async Task<Review> BuildAsync()
     {
+        Book? book = null;
         if (_bookBuilder != null)
         {
-            _book = await _bookBuilder.BuildAsync();
-            if (_book.Id != 0)
-                WithBookId(_book.Id);
+            book = await _bookBuilder.BuildAsync();
+            WithBookId(book.Id);
         }
 
         var review = await base.BuildAsync();
-        review.Book = _book;
+        review.Id = TestId.New();
+        review.Book = book;
         return review;
     }
 }
