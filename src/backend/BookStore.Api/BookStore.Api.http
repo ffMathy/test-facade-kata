@@ -1,0 +1,185 @@
+@BookStore.Api_HostAddress = http://localhost:5000
+
+### ── Authors ─────────────────────────────────────────────────────────────
+
+# List all authors
+GET {{BookStore.Api_HostAddress}}/api/authors
+Accept: application/json
+
+###
+
+# Get a single author by id
+GET {{BookStore.Api_HostAddress}}/api/authors/1
+Accept: application/json
+
+###
+
+# Create a new author
+POST {{BookStore.Api_HostAddress}}/api/authors
+Content-Type: application/json
+
+{
+  "name": "J.K. Rowling",
+  "bio": "British author of the Harry Potter series."
+}
+
+###
+
+# Update an existing author (id comes from the URL, not the body)
+PUT {{BookStore.Api_HostAddress}}/api/authors/1
+Content-Type: application/json
+
+{
+  "name": "J.R.R. Tolkien",
+  "bio": "Updated biography."
+}
+
+###
+
+# Delete an author
+DELETE {{BookStore.Api_HostAddress}}/api/authors/1
+
+###
+
+### ── Genres ──────────────────────────────────────────────────────────────
+
+# List all genres
+GET {{BookStore.Api_HostAddress}}/api/genres
+Accept: application/json
+
+###
+
+# Get a single genre by id
+GET {{BookStore.Api_HostAddress}}/api/genres/1
+Accept: application/json
+
+###
+
+# Create a new genre
+POST {{BookStore.Api_HostAddress}}/api/genres
+Content-Type: application/json
+
+{
+  "name": "Science Fiction"
+}
+
+###
+
+# Update an existing genre
+PUT {{BookStore.Api_HostAddress}}/api/genres/1
+Content-Type: application/json
+
+{
+  "name": "Fantasy"
+}
+
+###
+
+# Delete a genre
+DELETE {{BookStore.Api_HostAddress}}/api/genres/1
+
+###
+
+### ── Books ───────────────────────────────────────────────────────────────
+
+# List all books (includes author and genres)
+GET {{BookStore.Api_HostAddress}}/api/books
+Accept: application/json
+
+###
+
+# Get a single book by id (includes author, genres, and reviews)
+GET {{BookStore.Api_HostAddress}}/api/books/1
+Accept: application/json
+
+###
+
+# Create a new book
+POST {{BookStore.Api_HostAddress}}/api/books
+Content-Type: application/json
+
+{
+  "title": "Animal Farm",
+  "publishedYear": 1945,
+  "authorId": 2
+}
+
+###
+
+# Update an existing book
+PUT {{BookStore.Api_HostAddress}}/api/books/1
+Content-Type: application/json
+
+{
+  "title": "The Lord of the Rings",
+  "publishedYear": 1954,
+  "authorId": 1
+}
+
+###
+
+# Delete a book
+DELETE {{BookStore.Api_HostAddress}}/api/books/1
+
+###
+
+### ── Book–Genre links ─────────────────────────────────────────────────────
+
+# List all genres assigned to a book
+GET {{BookStore.Api_HostAddress}}/api/books/1/genres
+Accept: application/json
+
+###
+
+# Assign genre 2 (Dystopian) to book 1
+POST {{BookStore.Api_HostAddress}}/api/books/1/genres/2
+
+###
+
+# Remove genre 2 from book 1
+DELETE {{BookStore.Api_HostAddress}}/api/books/1/genres/2
+
+###
+
+### ── Reviews ─────────────────────────────────────────────────────────────
+
+# List all reviews for a book
+GET {{BookStore.Api_HostAddress}}/api/books/1/reviews
+Accept: application/json
+
+###
+
+# Get a single review by id
+GET {{BookStore.Api_HostAddress}}/api/books/1/reviews/1
+Accept: application/json
+
+###
+
+# Create a review for a book
+POST {{BookStore.Api_HostAddress}}/api/books/1/reviews
+Content-Type: application/json
+
+{
+  "reviewerName": "Dave",
+  "rating": 5,
+  "comment": "Absolutely brilliant."
+}
+
+###
+
+# Update a review
+PUT {{BookStore.Api_HostAddress}}/api/books/1/reviews/1
+Content-Type: application/json
+
+{
+  "reviewerName": "Alice",
+  "rating": 4,
+  "comment": "Updated comment."
+}
+
+###
+
+# Delete a review
+DELETE {{BookStore.Api_HostAddress}}/api/books/1/reviews/1
+
+###
