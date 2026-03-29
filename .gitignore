@@ -416,3 +416,13 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# Frontend build output (Vite)
+src/frontend/dist/
+
+# Playwright test results and reports
+src/frontend/test-results/
+src/frontend/playwright-report/
+
+# Frontend dependencies (installed via npm install)
+src/frontend/node_modules/
